@@ -1,0 +1,239 @@
+# PLAN — LSB-based Steganography System for Image and Video
+
+**Status:** Approved by the team on 2026-10-20 (Phase 2).
+**Team:** Swayam Agarwal (23BIT0216), Shriyans Pratihari (23BIT0219).
+**Course:** Multimedia & Data Security — simple multimedia project.
+
+---
+
+## 1. Requirements (restated)
+
+A **local** Tkinter desktop application for **covert communication** (not "secure" —
+there is no encryption) that hides a UTF-8 text message inside a cover **image**
+(output: PNG) or **video** (output: MKV with lossless FFV1, original audio copied
+unchanged) using 1-bit Least Significant Bit (LSB) substitution in the R, G, B bytes.
+The message is preceded by a **length + CRC32 header** (no end-of-message delimiter).
+The decoder returns the exact message or a clear reason why it cannot.
+The project also produces real metrics and figures for the slides, and at the end a
+**new** updated PowerPoint deck (the original `LSB_Steganography.pptx` is never
+overwritten). Video support works by treating frames as images; it is the same algorithm.
+
+### Working rules (summary)
+- Phase gates: implement one subproblem at a time, run its tests, show real output,
+  stop for the team's "continue".
+- No invented numbers, APIs or results. Every number comes from a real run.
+- Assumptions are marked and listed here.
+- Git: commit locally on `main` after each approved subproblem. Never push,
+  force-push or rewrite history without asking.
+
+---
+
+## 2. Environment (verified 2026-10-20)
+
+| Item | Version |
+|---|---|
+| OS | Windows 11 Home Single Language 10.0.26200 |
+| Python | 3.13.2 (`C:\Python313\python.exe`), project venv in `.venv` |
+| FFmpeg / ffprobe | 9.0.2 full_build (gyan.dev), installed with `winget install --id Gyan.FFmpeg -e` |
+| Packages | exact pins in `requirements.txt` (opencv-python 5.0.0.93, numpy 2.5.4, pillow 13.0.0, matplotlib 3.11.2, pytest 9.1.1 + dependencies) |
+
+**Supported Python: 3.12 or newer.** Only 3.13.2 is tested. The pinned numpy 2.5.4 and
+contourpy 1.4.0 declare `Requires-Python >=3.12`, so older Pythons cannot install
+`requirements.txt`. The teammate will install Python 3.13.
+
+---
+
+## 3. Assumptions
+
+- **A1:** Submission = live demo + slides (format/deadline/grading not yet known).
+- **A2:** Bits are written MSB-first within each byte (NumPy `unpackbits` default `bitorder="big"`).
+- **A3:** Internal pixel convention is RGB, shape H×W×C, uint8, row-major; flattening goes
+  pixel by pixel, then R, G, B within a pixel. Pillow gives RGB; video frames are requested
+  from FFmpeg as `rgb24`, so no BGR conversion is needed in our code.
+- **A4:** Grayscale (`L`) covers stay grayscale: embed in the single grey channel
+  (capacity W×H bits), save as `L` PNG. `LA` is handled like RGBA (embed in L, keep alpha).
+- **A5:** Palette (`P`) images are converted to RGB (RGBA if the palette has transparency)
+  before embedding, because changing the LSB of a palette *index* changes colours visibly.
+  Output is a truecolour PNG and the GUI says so. Bilevel (`1`), CMYK and similar modes are
+  also converted to RGB.
+- **A6:** The decoder decides which channels to read from the stego PNG's own mode
+  (L/LA → grey channel; RGB/RGBA → R, G, B). No side information needed.
+- **A7 (confirmed):** Empty messages are rejected ("nothing to hide") in the engine and GUI.
+- **A8:** For video, the cover frames are the frames FFmpeg decodes to `rgb24`. If the
+  source is YUV (most MP4s), that conversion happens once at read time and is not part of
+  the steganography. All frames are re-encoded to FFV1 (lossless); frames after the payload
+  have unchanged pixels but the file is new.
+- **A9:** A video is treated as variable frame rate (VFR) and rejected when ffprobe's
+  `r_frame_rate` ≠ `avg_frame_rate` (heuristic, to be tested on a synthetic VFR clip).
+- **A10:** GUI warning when video duration > 10 s or width×height > 640×480 (warning only).
+- **A11:** Frame count comes from `ffprobe -count_frames` (exact; decodes the file),
+  not the container's `nb_frames`.
+- **A12:** FFmpeg is located with `shutil.which("ffmpeg")`; if missing, a friendly
+  "FFmpeg missing" error is shown. No hardcoded install paths.
+- **A13:** Timings use `time.perf_counter()` on the development laptop and are labelled so.
+- **A14:** Test images/videos are generated locally (gradients, noise, ffmpeg `lavfi`
+  test sources, palette and RGBA images). Nothing is downloaded. For Phase 4 the team will
+  be asked for 2–3 of their own photos and a short video.
+
+---
+
+## 4. Design decisions
+
+| # | Decision |
+|---|---|
+| D1 | Python 3.12+ (3.13.2 tested) in `.venv`. |
+| D2 | Tkinter GUI, one window. Encode/decode logic never imports tkinter. |
+| D3 | 1 LSB per R, G, B byte. Alpha never touched. No 2-LSB option. |
+| D4 | Length header + CRC32, no delimiter (layout in §5). |
+| D5 | Image output always PNG. JPEG/BMP accepted as cover (read only; note shown for JPEG). 16-bit PNGs rejected with a clear message. |
+| D6 | Video I/O through FFmpeg pipes on both sides: read with `ffmpeg ... -f rawvideo -pix_fmt rgb24 -`, write raw rgb24 frames into `ffmpeg -f rawvideo ... -c:v ffv1`. In SP5 also test the OpenCV reader and report whether it is bit-exact. **If OpenCV is not needed, remove opencv-python from `requirements.txt` and tell the team.** |
+| D7 | FFV1 pixel format `bgr0` (`ffmpeg -h encoder=ffv1` lists `bgr0`/`bgra` as the only 8-bit RGB-family formats; 8-bit `gbrp` is not listed). Losslessness of rgb24 → bgr0 → rgb24 must be **proven** by the SP5 round-trip test. Fallback: `bgra`, then PNG frame sequence + audio (only with approval). |
+| D8 | Container MKV. Audio `-map 1:a? -c:a copy` from the original. Frame rate passed as the exact `r_frame_rate` fraction. |
+| D9 | Rotation metadata: frames processed as stored; try to carry the tag with `-display_rotation` (not yet verified on FFmpeg 9.0.2). If it does not work, document that rotation tags are dropped. |
+| D10 | Video is streamed one frame at a time; never fully loaded in memory. Decoding stops once the payload is read. |
+| D11 | Long work runs in a worker thread; progress/results go through `queue.Queue`, polled by the main thread with `root.after(...)`. Only the main thread touches widgets. |
+| D12 | `requirements.txt` holds the exact pins tested on Python 3.13. No separate file for older Pythons. |
+| D13 | `errors.py` with `CapacityError`, `NoHiddenMessageError`, `CorruptedDataError`, `UnsupportedFormatError`, `FFmpegNotFoundError`, `EmptyMessageError`. The GUI maps each to a friendly message box. |
+| D14 | Subprocesses use argument lists (no `shell=True`); paths via `pathlib`; images via Pillow (not `cv2.imread`, which fails on non-ASCII Windows paths). Spaces and non-ASCII paths must work. |
+
+---
+
+## 5. Header layout (version 1)
+
+| Offset | Size | Field | Notes |
+|---|---|---|---|
+| 0 | 4 B | Magic `b"LSBS"` | mismatch → "No hidden message found" |
+| 4 | 1 B | Version `0x01` | unknown → "made by a different version" |
+| 5 | 4 B | Payload length, uint32 big-endian | must be > 0 and ≤ capacity − 13 bytes |
+| 9 | 4 B | CRC32 of payload, big-endian (`zlib.crc32`) | mismatch → "data corrupted or not produced by this tool" |
+| 13 | N B | Payload (UTF-8 bytes) | invalid UTF-8 → treated as corrupted |
+
+Header = 13 bytes = 104 bits.
+
+**Capacity:**
+`capacity_bits = usable_channel_bytes × 1`,
+`max_payload_bytes = floor((capacity_bits − 104) / 8)`.
+- Image: usable bytes = W×H×3 (RGB/RGBA) or W×H (L/LA).
+- Video: usable bytes = frames×W×H×3.
+- The GUI shows "up to N bytes (N ASCII characters; non-English characters use 2–4 bytes each)".
+- Worked example: 100×100 RGB → 30000 bits → (30000 − 104) // 8 = 3737 bytes.
+
+---
+
+## 6. File structure
+
+```
+LSBSteg/
+  bitutils.py      text<->bytes (UTF-8), bytes<->bits, embed/extract LSBs in a flat uint8 array
+  header.py        build/parse the 13-byte header, CRC32, capacity maths
+  errors.py        custom exception classes
+  encoder.py       encode_image(), encode_video()
+  decoder.py       decode_image(), decode_video()
+  video_utils.py   ffprobe metadata, find ffmpeg, frame reader/writer pipes
+  metrics.py       MSE, PSNR, capacity, timing helpers
+  results.py       runs experiments -> results/metrics.csv + figures
+  app.py           Tkinter GUI (entry point: python app.py)
+  tests/           pytest suites + conftest.py (synthetic fixtures in temp dirs)
+  results/         generated output (CSV, PNG figures)
+  README.md, VIVA_NOTES.md, PLAN.md, requirements.txt, .gitignore
+```
+
+---
+
+## 7. Subproblems and acceptance tests
+
+### SP1 — Environment and setup
+- Done: FFmpeg 9.0.2 via winget, `.venv`, packages, `requirements.txt` (exact pins).
+- Remaining: `.gitignore` (`.venv/`, `__pycache__/`, `.pytest_cache/`), README install
+  section (Python 3.12+, winget FFmpeg, venv, "restart the terminal after installing FFmpeg").
+- **Accept:** in a fresh terminal, `ffmpeg -version`, `ffprobe -version` and all venv
+  imports succeed.
+
+### SP2 — Bit engine (`bitutils.py`)
+- str ↔ bytes ↔ uint8 bit array; `embed_bits(flat, bits, start=0)` returns a modified copy;
+  `extract_bits(flat, n, start=0)`. Vectorised NumPy (`(flat & 0xFE) | bits`, `flat & 1`).
+- **Accept:** round trips for ASCII, Hindi, emoji; embed→extract returns identical bits;
+  every changed byte differs by at most 1; the input array is not mutated; too many bits →
+  `CapacityError`.
+
+### SP3 — Header and framing (`header.py`)
+- **Accept:** build→parse round trip; wrong magic → `NoHiddenMessageError`; flipped payload
+  bit → `CorruptedDataError`; declared length > capacity → error without reading garbage;
+  length 0 → error; capacity formula matches hand-computed values (100×100 RGB → 3737 bytes).
+
+### SP4 — Image pipeline
+- Cover path + message + output path → PNG; stego path → message. Modes per A4–A6, D5.
+- **Accept:** save→reload→exact match for RGB, L, RGBA (alpha byte-identical), palette, JPEG
+  cover; one-byte message; exactly-at-capacity passes; one byte over → `CapacityError` with
+  numbers; 1×1 image → clear capacity error; 4000×3000 image works (time reported); 16-bit
+  PNG → `UnsupportedFormatError`; path with spaces and non-ASCII characters works; clean
+  (never encoded) image → "no hidden message".
+
+### SP5 — Video pipeline
+- ffprobe → width, height, r/avg frame rate, exact frame count, audio, rotation.
+  Reader pipe → modify frames until payload written → writer pipe (FFV1 bgr0) → mux
+  original audio (copy).
+- Risks: bgr0 not round-tripping, pipe deadlock on full stderr, timestamp drift,
+  audio/MKV compatibility, runtime.
+- **Accept:**
+  1. Bit-exactness proof: random frames written then read back are `np.array_equal`.
+  2. Round trip with a message spanning more than one frame (e.g. 160×120 testsrc, 20 KB message).
+  3. Output frame count and frame rate equal the input.
+  4. Audio present, same codec, identical packet hash vs original.
+  5. Synthetic VFR clip rejected.
+  6. Over-capacity rejected before anything is written.
+  7. FFmpeg missing → `FFmpegNotFoundError` (simulated).
+  8. OpenCV reader comparison reported → keep or remove opencv-python (D6).
+
+### SP6 — Metrics (`metrics.py`, `results.py`)
+- MSE, PSNR = 10·log10(255² / MSE) (MSE = 0 → "identical / ∞"), capacity, % used,
+  embed/extract time, exact match; video per-frame PSNR on modified frames, frames
+  modified, file sizes. Video reports (a) mean PSNR over modified frames and (b) PSNR of
+  the MSE pooled over all frames, clearly labelled.
+- `results/metrics.csv` + figures: side-by-side, difference ×255, histogram overlay.
+- **Accept:** PSNR unit tests on hand-computed cases; CSV and PNGs produced by a real run.
+
+### SP7 — Tkinter GUI (`app.py`)
+- Image/Video mode, Browse cover, Load .txt (UTF-8), message box, choose output,
+  Encode, Decode, read-only result box, capacity label, status bar, progress bar,
+  side-by-side preview (first frame for video), large-video warning (A10),
+  "re-encoding destroys the message" warning. All errors as message boxes; never a traceback.
+- **Accept:** manual checklist followed by the team; automated tests of non-GUI handlers.
+
+### SP8 — Testing and negative demonstrations
+- All tests above, plus: stego PNG re-saved as JPEG → extract; stego MKV re-encoded to
+  H.264 MP4 → extract. Report what actually happens.
+- GUI manual test checklist.
+
+### SP9 — Documentation
+- README (purpose, Python 3.12+, install incl. FFmpeg, run, usage, algorithm, header,
+  formats, limitations) and `VIVA_NOTES.md` (one plain paragraph per subproblem).
+  Docs checked against the code.
+
+### SP10 — Extras
+- **Approved:** new deck `LSB_Steganography_v2.pptx` — same design; fix title, abstract,
+  objectives (delimiter → length header, add video), architecture; add results and
+  limitations slides with real numbers only. Original file untouched. Done last.
+- **Pending approval:** chi-square detectability demo.
+- **Rejected:** encryption.
+
+---
+
+## 8. Risks
+
+| Risk | Mitigation |
+|---|---|
+| FFV1/bgr0 not bit-exact | Proven first in SP5; fallback `bgra`, then PNG sequence (with approval) |
+| PATH not refreshed → "FFmpeg missing" | Restart terminal; friendly error; README note |
+| Only Python 3.13 tested | README states 3.12+ supported, 3.13 tested |
+| Long/HD videos slow, large output | A10 warning; measured timings reported |
+| opencv-python 5.0 is a new major version | Only used in the D6 comparison; removed if not needed |
+| Slides describe a delimiter | Fixed in the v2 deck |
+
+---
+
+## 9. Task order
+
+SP1 finish → SP2 → SP3 → SP4 → SP5 (bit-exact proof first) → SP6 → SP7 → SP8 → SP9 →
+Phase 4 (team's photos/video, or synthetic) → `results.py` run → v2 deck → final report.
+Stop for "continue" after each step; commit locally on `main` after each approved step.
