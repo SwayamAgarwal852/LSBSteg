@@ -29,5 +29,9 @@ class FFmpegNotFoundError(StegoError):
     """ffmpeg/ffprobe are not installed or not on PATH."""
 
 
+class FFmpegError(StegoError):
+    """ffmpeg/ffprobe ran but failed while processing a video."""
+
+
 class EmptyMessageError(StegoError):
     """The user tried to hide an empty message (nothing to hide)."""

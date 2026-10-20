@@ -64,7 +64,7 @@ contourpy 1.4.0 declare `Requires-Python >=3.12`, so older Pythons cannot instal
   the steganography. All frames are re-encoded to FFV1 (lossless); frames after the payload
   have unchanged pixels but the file is new.
 - **A9:** A video is treated as variable frame rate (VFR) and rejected when ffprobe's
-  `r_frame_rate` ≠ `avg_frame_rate` (heuristic, to be tested on a synthetic VFR clip).
+  `r_frame_rate` ≠ `avg_frame_rate` (heuristic). Verified in SP5: synthetic VFR clip → 25/1 vs 1075/91 (rejected); CFR 25 and 30000/1001 MP4s and our own FFV1 MKV outputs report equal rates (accepted).
 - **A10:** GUI warning when video duration > 10 s or width×height > 640×480 (warning only).
 - **A11:** Frame count comes from `ffprobe -count_frames` (exact; decodes the file),
   not the container's `nb_frames`.
@@ -87,13 +87,13 @@ contourpy 1.4.0 declare `Requires-Python >=3.12`, so older Pythons cannot instal
 | D4 | Length header + CRC32, no delimiter (layout in §5). |
 | D5 | Image output always PNG. JPEG/BMP accepted as cover (read only; note shown for JPEG). 16-bit PNGs rejected with a clear message. |
 | D6 | Video I/O through FFmpeg pipes on both sides: read with `ffmpeg ... -f rawvideo -pix_fmt rgb24 -`, write raw rgb24 frames into `ffmpeg -f rawvideo ... -c:v ffv1`. In SP5 also test the OpenCV reader and report whether it is bit-exact. **If OpenCV is not needed, remove opencv-python from `requirements.txt` and tell the team.** **Outcome (SP5 Stage A):** OpenCV 5.0.0 read FFV1/bgr0 bit-exactly but is not needed (FFmpeg pipes do all video I/O), so opencv-python was removed with team approval. |
-| D7 | FFV1 pixel format `bgr0` (`ffmpeg -h encoder=ffv1` lists `bgr0`/`bgra` as the only 8-bit RGB-family formats; 8-bit `gbrp` is not listed). Losslessness of rgb24 → bgr0 → rgb24 must be **proven** by the SP5 round-trip test. Fallback: `bgra`, then PNG frame sequence + audio (only with approval). |
+| D7 | FFV1 pixel format `bgr0` (`ffmpeg -h encoder=ffv1` lists `bgr0`/`bgra` as the only 8-bit RGB-family formats; 8-bit `gbrp` is not listed). Losslessness of rgb24 → bgr0 → rgb24 must be **proven** by the SP5 round-trip test. Fallback: `bgra`, then PNG frame sequence + audio (only with approval). **Outcome (SP5):** bgr0 proven bit-exact (random, 0/255 extremes, odd 161×121); ffmpeg auto-inserts a same-size rgb24↔bgr0 swscale step (csp gbr, range pc), which is lossless; bgra not needed. |
 | D8 | Container MKV. Audio `-map 1:a? -c:a copy` from the original. Frame rate passed as the exact `r_frame_rate` fraction. |
-| D9 | Rotation metadata: frames processed as stored; try to carry the tag with `-display_rotation` (not yet verified on FFmpeg 9.0.2). If it does not work, document that rotation tags are dropped. |
+| D9 | Rotation metadata: frames processed as stored; try to carry the tag with `-display_rotation` (not yet verified on FFmpeg 9.0.2). If it does not work, document that rotation tags are dropped. **Outcome (SP5):** works on FFmpeg 9.0.2 (`-noautorotate -display_rotation <deg>` on the pipe input → DisplayMatrix in MKV). Reader and writer MUST use `-noautorotate`: by default ffmpeg transposes rotated frames, which destroys the message. Only the rotation angle is carried; flips in a display matrix are not. |
 | D10 | Video is streamed one frame at a time; never fully loaded in memory. Decoding stops once the payload is read. |
 | D11 | Long work runs in a worker thread; progress/results go through `queue.Queue`, polled by the main thread with `root.after(...)`. Only the main thread touches widgets. |
 | D12 | `requirements.txt` holds the exact pins tested on Python 3.13. No separate file for older Pythons. |
-| D13 | `errors.py` with `CapacityError`, `NoHiddenMessageError`, `CorruptedDataError`, `UnsupportedFormatError`, `FFmpegNotFoundError`, `EmptyMessageError`. The GUI maps each to a friendly message box. |
+| D13 | `errors.py` with `CapacityError`, `NoHiddenMessageError`, `CorruptedDataError`, `UnsupportedFormatError`, `FFmpegNotFoundError`, `EmptyMessageError`, plus `FFmpegError` (ffmpeg failed mid-run; added in SP5) under a common base `StegoError`. The GUI maps each to a friendly message box. |
 | D14 | Subprocesses use argument lists (no `shell=True`); paths via `pathlib`; images via Pillow (not `cv2.imread`, which fails on non-ASCII Windows paths). Spaces and non-ASCII paths must work. |
 
 ---
