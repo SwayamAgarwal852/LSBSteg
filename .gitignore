@@ -1,0 +1,10 @@
+# Python virtual environment
+.venv/
+
+# Python / pytest caches
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Office lock files (created while a .pptx is open in PowerPoint)
+~$*
