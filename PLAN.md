@@ -35,7 +35,7 @@ overwritten). Video support works by treating frames as images; it is the same a
 | OS | Windows 11 Home Single Language 10.0.26200 |
 | Python | 3.13.2 (`C:\Python313\python.exe`), project venv in `.venv` |
 | FFmpeg / ffprobe | 9.0.2 full_build (gyan.dev), installed with `winget install --id Gyan.FFmpeg -e` |
-| Packages | exact pins in `requirements.txt` (opencv-python 5.0.0.93, numpy 2.5.4, pillow 13.0.0, matplotlib 3.11.2, pytest 9.1.1 + dependencies) |
+| Packages | exact pins in `requirements.txt` (numpy 2.5.4, pillow 13.0.0, matplotlib 3.11.2, pytest 9.1.1 + dependencies) |
 
 **Supported Python: 3.12 or newer.** Only 3.13.2 is tested. The pinned numpy 2.5.4 and
 contourpy 1.4.0 declare `Requires-Python >=3.12`, so older Pythons cannot install
@@ -86,7 +86,7 @@ contourpy 1.4.0 declare `Requires-Python >=3.12`, so older Pythons cannot instal
 | D3 | 1 LSB per R, G, B byte. Alpha never touched. No 2-LSB option. |
 | D4 | Length header + CRC32, no delimiter (layout in §5). |
 | D5 | Image output always PNG. JPEG/BMP accepted as cover (read only; note shown for JPEG). 16-bit PNGs rejected with a clear message. |
-| D6 | Video I/O through FFmpeg pipes on both sides: read with `ffmpeg ... -f rawvideo -pix_fmt rgb24 -`, write raw rgb24 frames into `ffmpeg -f rawvideo ... -c:v ffv1`. In SP5 also test the OpenCV reader and report whether it is bit-exact. **If OpenCV is not needed, remove opencv-python from `requirements.txt` and tell the team.** |
+| D6 | Video I/O through FFmpeg pipes on both sides: read with `ffmpeg ... -f rawvideo -pix_fmt rgb24 -`, write raw rgb24 frames into `ffmpeg -f rawvideo ... -c:v ffv1`. In SP5 also test the OpenCV reader and report whether it is bit-exact. **If OpenCV is not needed, remove opencv-python from `requirements.txt` and tell the team.** **Outcome (SP5 Stage A):** OpenCV 5.0.0 read FFV1/bgr0 bit-exactly but is not needed (FFmpeg pipes do all video I/O), so opencv-python was removed with team approval. |
 | D7 | FFV1 pixel format `bgr0` (`ffmpeg -h encoder=ffv1` lists `bgr0`/`bgra` as the only 8-bit RGB-family formats; 8-bit `gbrp` is not listed). Losslessness of rgb24 → bgr0 → rgb24 must be **proven** by the SP5 round-trip test. Fallback: `bgra`, then PNG frame sequence + audio (only with approval). |
 | D8 | Container MKV. Audio `-map 1:a? -c:a copy` from the original. Frame rate passed as the exact `r_frame_rate` fraction. |
 | D9 | Rotation metadata: frames processed as stored; try to carry the tag with `-display_rotation` (not yet verified on FFmpeg 9.0.2). If it does not work, document that rotation tags are dropped. |
@@ -227,7 +227,7 @@ LSBSteg/
 | PATH not refreshed → "FFmpeg missing" | Restart terminal; friendly error; README note |
 | Only Python 3.13 tested | README states 3.12+ supported, 3.13 tested |
 | Long/HD videos slow, large output | A10 warning; measured timings reported |
-| opencv-python 5.0 is a new major version | Only used in the D6 comparison; removed if not needed |
+| opencv-python 5.0 is a new major version | Removed after the SP5 Stage A comparison (not needed) |
 | Slides describe a delimiter | Fixed in the v2 deck |
 
 ---

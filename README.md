@@ -59,5 +59,5 @@ call `.\.venv\Scripts\python.exe` directly.
 ### 4. Check the setup
 
 ```powershell
-.\.venv\Scripts\python.exe -c "import cv2, numpy, PIL, matplotlib, pytest, tkinter; print('OK')"
+.\.venv\Scripts\python.exe -c "import numpy, PIL, matplotlib, pytest, tkinter; print('OK')"
 ```
