@@ -8,3 +8,6 @@ __pycache__/
 
 # Office lock files (created while a .pptx is open in PowerPoint)
 ~$*
+
+# Synthetic test output from results.py (not for slides)
+results/synthetic/
