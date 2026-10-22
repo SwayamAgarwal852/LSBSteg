@@ -257,6 +257,21 @@ LSBSteg/
 
 ---
 
+### Phase 4 progress (2026-10-22) — real covers
+- Covers (team files, read-only, not in git): macaw JPEG 4016x6016 RGB; parchment scroll PNG
+  2000x1232 RGBA (8-bit); phone-style MP4 1280x720 13.83 s 30/1 + AAC (over A10 limits) ->
+  converted copy `clip_640.mp4` 640x360, 10 s, 300 frames, 30/1, AAC (made by us, original
+  untouched; originals' SHA-256 unchanged).
+- `results.py --label real` -> `results/real/` (git-ignored: figures show the team's photos).
+  12 runs (1/10/50/100 %), all exact. PSNR: macaw 71.15/61.14/54.15/51.14 dB, scroll
+  71.36/61.36/54.27/51.25 dB (R,G,B only; alpha byte-identical at all 4 sizes), video pooled
+  71.14/61.14/54.15/51.14 dB. Video stego 45.96-79.51 MB vs 1.09 MB cover.
+- Figures inspected: histograms show the pairs-of-values effect; vertical stripes in the scroll
+  difference image come from the ASCII test message (top bit always 0) with 6000-bit rows.
+- GUI code path (gui_logic + Worker) encode/decode exact for both images and the video; ffprobe:
+  frames, rate, audio (identical packet hash) kept; no rotation tag in cover or stego.
+- Waiting for the team: commit figures or keep them out of git; then Phase 5.
+
 ## 8. Risks
 
 | Risk | Mitigation |
