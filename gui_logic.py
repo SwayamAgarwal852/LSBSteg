@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from fractions import Fraction
 from pathlib import Path
 
+import numpy as np
 from PIL import Image
 
 from decoder import decode_image, decode_video
@@ -27,7 +28,9 @@ from errors import (
     NoHiddenMessageError,
     UnsupportedFormatError,
 )
-from video_utils import find_tool, probe_video
+from image_utils import carrier_bytes, load_image
+from metrics import format_psnr, mse, percent_used, psnr, summarize_frame_mses, video_frame_mses
+from video_utils import FrameReader, find_tool, probe_video
 
 IMAGE, VIDEO = "image", "video"
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".bmp"}
@@ -296,3 +299,115 @@ class Worker:
                 found.append(self.events.get_nowait())
             except queue.Empty:
                 return found
+
+
+# ---------------------------------------------------------------- modern window helpers
+# Used by app_modern.py (the classic app.py does not need them).
+
+DIFF_CROP = (320, 240)  # (width, height) of the 1:1 difference view
+TINY_PAYLOAD_PERCENT = 1.0  # below this, warn that PSNR is very high
+
+
+@dataclass
+class CapacityUsage:
+    size: int  # message size in UTF-8 bytes
+    fraction: float  # for the bar: size / capacity, at most 1.0
+    over: bool  # True if the message does not fit
+
+
+def capacity_usage(message: str, capacity: int | None) -> CapacityUsage | None:
+    """Values for the live capacity bar; None until a cover was analysed."""
+    if not capacity:
+        return None
+    size = len(message.encode("utf-8"))
+    return CapacityUsage(size, min(size / capacity, 1.0), size > capacity)
+
+
+def dropped_file(paths) -> str:
+    """The single path from a drag-and-drop event (already split into a list)."""
+    paths = [p for p in paths if p]
+    if len(paths) != 1:
+        raise InputError("Please drop exactly one file.")
+    return paths[0]
+
+
+def _first_frame_pixels(mode: str, path: Path) -> np.ndarray:
+    """Pixels exactly as the encoder sees them (image, or first video frame)."""
+    if mode == IMAGE:
+        return load_image(path)
+    with FrameReader(path, probe_video(path)) as reader:
+        return next(iter(reader)).copy()
+
+
+def _carrier_part(pixels: np.ndarray) -> np.ndarray:
+    """Only the channels that carry bits: grey for L/LA, R,G,B otherwise."""
+    if pixels.ndim == 2:
+        return pixels
+    return pixels[..., 0] if pixels.shape[2] == 2 else pixels[..., :3]
+
+
+def difference_crop(mode: str, cover: Path, stego: Path, size=DIFF_CROP) -> Image.Image:
+    """|cover - stego| x 255 for the top-left corner, at 1:1 (no resampling).
+
+    The message is written from the top-left pixel on, so this is where the
+    changes are. A shrunken whole image would average the 0/1 pattern into
+    grey (seen in Phase 4), which is why we crop instead of scaling.
+    """
+    c = _carrier_part(_first_frame_pixels(mode, cover))
+    s = _carrier_part(_first_frame_pixels(mode, stego))
+    if c.shape != s.shape:
+        raise InputError("The cover and the stego file have different sizes.")
+    w, h = size
+    diff = (c[:h, :w] != s[:h, :w]).astype(np.uint8) * 255
+    return Image.fromarray(diff)
+
+
+@dataclass
+class QualityReport:
+    mode: str
+    mse: float  # image: over R,G,B (or grey); video: pooled over all frames
+    psnr: float
+    payload_bytes: int
+    capacity: int
+    encode_seconds: float
+    frames_total: int = 0  # video only
+    frames_modified: int = 0
+    mean_psnr_modified: float = 0.0
+
+
+def measure_quality(mode: str, cover: Path, stego: Path, payload_bytes: int,
+                    capacity: int, encode_seconds: float) -> QualityReport:
+    """MSE/PSNR between cover and stego with metrics.py (runs in the worker)."""
+    if mode == IMAGE:
+        m = mse(carrier_bytes(load_image(cover)), carrier_bytes(load_image(stego)))
+        return QualityReport(mode, m, psnr(m), payload_bytes, capacity, encode_seconds)
+    frame_mses = video_frame_mses(cover, stego)
+    summary = summarize_frame_mses(frame_mses)
+    pooled = sum(frame_mses) / len(frame_mses)
+    return QualityReport(mode, pooled, summary["pooled_psnr"], payload_bytes, capacity,
+                         encode_seconds, summary["frames_total"], summary["frames_modified"],
+                         summary["mean_psnr_modified"])
+
+
+def quality_lines(r: QualityReport) -> list[str]:
+    """Labelled text for the metrics panel."""
+    used = percent_used(r.payload_bytes, r.capacity)
+    lines = ["Measured for this cover and this message only (not a general rule)."]
+    if r.mode == IMAGE:
+        lines += [f"MSE (R, G, B values only; alpha not included): {r.mse:.6f}",
+                  f"PSNR (R, G, B values only): {format_psnr(r.psnr)}"]
+    else:
+        lines += [f"MSE pooled over all {r.frames_total:,} frames: {r.mse:.6f}",
+                  f"PSNR pooled over all {r.frames_total:,} frames: {format_psnr(r.psnr)}"]
+        if r.frames_modified:
+            lines.append(f"PSNR mean over the {r.frames_modified:,} modified frames only: "
+                         f"{format_psnr(r.mean_psnr_modified)}")
+        else:
+            lines.append("No frame was changed (every hidden bit already matched).")
+    lines += [f"Encode time: {format_seconds(r.encode_seconds)}",
+              f"Capacity used: {used:.2f}% ({r.payload_bytes:,} of {r.capacity:,} message bytes; "
+              "the 13-byte header is not counted)"]
+    if used < TINY_PAYLOAD_PERCENT:
+        lines.append(f"Note: the message uses less than {TINY_PAYLOAD_PERCENT:g}% of the capacity, "
+                     "so very few values changed and the PSNR is very high.")
+    return lines
