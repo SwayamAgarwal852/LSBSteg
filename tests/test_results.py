@@ -44,10 +44,17 @@ def test_run_writes_csv_and_figures(tmp_path):
         rows = list(csv.DictReader(f))
     assert len(rows) == 6  # 3 covers x 2 sizes
     assert list(rows[0]) == results.CSV_COLUMNS
+    sizes = {p.name: p.stat().st_size for p in (image, grey, video)}
     for row in rows:
         assert row["label"] == "synthetic"
         assert row["exact_match"] == "True"
         assert 40 < float(row["psnr_db"]) < math.inf
+        # PSNR column agrees with the MSE column: 10*log10(255^2 / MSE)
+        assert float(row["psnr_db"]) == pytest.approx(10 * math.log10(65025 / float(row["mse"])))
+        assert int(row["payload_bytes"]) <= int(row["capacity_bytes"])
+        assert float(row["encode_s"]) > 0 and float(row["decode_s"]) > 0
+        assert int(row["cover_file_bytes"]) == sizes[row["cover"]]
+        assert int(row["stego_file_bytes"]) > 0
     full = [r for r in rows if r["percent_used"] == "100.0"]
     assert len(full) == 3
     video_full = next(r for r in full if r["kind"] == "video")

@@ -132,8 +132,10 @@ def test_ffv1_bgr0_round_trip_is_bit_exact(tmp_path, w, h):
 def test_message_spanning_several_frames(clips, tmp_path):
     message = ("Secret नमस्ते 😀 " * 1100)[:20000]
     assert len(message.encode("utf-8")) > 20000  # > 20 KB, frame holds 7200 bytes
+    cover_hash = hashlib.sha256(clips["cfr_audio"].read_bytes()).hexdigest()
     out = encode_video(clips["cfr_audio"], message, tmp_path / "stego.mkv")
     assert decode_video(out) == message
+    assert hashlib.sha256(clips["cfr_audio"].read_bytes()).hexdigest() == cover_hash  # cover untouched
 
     cover = read_frames(clips["cfr_audio"], 160, 120)
     stego = read_frames(out, 160, 120)
