@@ -297,8 +297,18 @@ LSBSteg/
   and without tkinterdnd2; window-size bug found on the real screen (125 %: bottom off-screen)
   and fixed via Win32 work area; requirements.txt + requirements-dnd.txt; README; checklist.
 - Engine files, app.py and the 181 original tests unchanged.
-- Remaining: deliberate breakage, clean run, fresh clone; the team clicks through
-  GUI_CHECKLIST.md section 8 and tests a real drag and drop.
+- Deliberate breakage, all caught after one test fix: (1) close() without the Tcl timer cancel
+  -- first NOT caught (nothing ran the event loop after destroy; a single real close prints
+  nothing even without the fix), test now keeps the loop running and fails with
+  'invalid command name ...update/...poll_worker'; (2) capacity 'over' when exactly full;
+  (3) difference view resampled instead of 1:1 (5 tests fail); (4) drag and drop without
+  fallback (the no-tkinterdnd2 test fails). All restored.
+- Clean run: 219 passed. Fresh clone of ui-modern + new venv: requirements.txt only ->
+  219 passed, modern window starts with drag and drop off; + requirements-dnd.txt -> 219
+  passed, drag and drop on. Real launches of app_modern.py and app.py: windows appear, close
+  normally, stderr empty; screenshot shows the whole modern window on the 125 % screen.
+- NOT done (needs a person): clicking through GUI_CHECKLIST.md section 8 and a real drag and
+  drop from File Explorer (8b). main untouched; nothing pushed.
 
 ## 8. Risks
 
