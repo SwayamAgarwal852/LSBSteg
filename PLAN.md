@@ -199,6 +199,16 @@ LSBSteg/
   side-by-side preview (first frame for video), large-video warning (A10),
   "re-encoding destroys the message" warning. All errors as message boxes; never a traceback.
 - **Accept:** manual checklist followed by the team; automated tests of non-GUI handlers.
+- **SP7 progress (2026-10-22):**
+  - Done (commit 0a86fd3): `gui_logic.py` (validation, friendly messages, warnings, previews,
+    jobs, Worker thread + queue), `app.py` (one window, `root.after` polling), 48 tests in
+    `tests/test_gui_logic.py` + `tests/test_app_smoke.py` (170 total pass), `GUI_CHECKLIST.md`.
+  - Verified 2026-10-22: real `python app.py` launch → window "LSB Steganography - Image and
+    Video" appeared, closed by WM_CLOSE, stderr/stdout empty. Deliberate breakage caught by tests:
+    (1) empty-message check disabled → `test_empty_message` fails; (2) buttons never re-enabled →
+    2 smoke tests fail; (3) A10 `>` changed to `>=` → `test_video_notes[640-480-250-25/1]` fails.
+    Restored; 170 pass.
+  - Remaining: the team runs `GUI_CHECKLIST.md` by hand.
 
 ### SP8 — Testing and negative demonstrations
 - All tests above, plus: stego PNG re-saved as JPEG → extract; stego MKV re-encoded to
