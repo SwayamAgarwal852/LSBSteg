@@ -233,6 +233,18 @@ LSBSteg/
 - README (purpose, Python 3.12+, install incl. FFmpeg, run, usage, algorithm, header,
   formats, limitations) and `VIVA_NOTES.md` (one plain paragraph per subproblem).
   Docs checked against the code.
+- **SP9 progress (2026-10-22):**
+  - Done (commit 0202627): README.md (purpose/honest framing, features, requirements,
+    install, run, GUI steps, algorithm, header, capacity, formats, tests, results.py recipe,
+    file list, limitations) and VIVA_NOTES.md (SP1–SP8 paragraphs, 15 questions).
+  - Checked: 58 UI strings/error texts/constants matched against the code; numbers taken
+    from runs in this session; README commands run verbatim in a fresh clone (install,
+    setup check, 181 tests, results recipe → 8 runs exact, app launch); FFmpeg hidden from
+    PATH → 150 passed, 31 skipped. Rotation flip loss and autorotate scrambling re-verified
+    by a real run. 10 wording mismatches found in the drafts and fixed.
+  - Note: §6 above lists `tests/conftest.py`; it was never needed and does not exist
+    (README lists the real files).
+  - Remaining: the team runs `GUI_CHECKLIST.md` by hand.
 
 ### SP10 — Extras
 - **Approved:** new deck `LSB_Steganography_v2.pptx` — same design; fix title, abstract,
