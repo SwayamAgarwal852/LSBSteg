@@ -242,6 +242,36 @@ With your own photos and videos:
 
 (default output folder: `results`).
 
+## Measured results (our three real covers)
+
+These numbers were **measured on our three covers** with `results.py --label real`; they
+are not a general rule. Every one of the 12 runs decoded to exactly the original message.
+PSNR is computed on the R, G, B values only (alpha is never changed and was checked to be
+byte-identical).
+
+| Cover | 1 % | 10 % | 50 % | 100 % of capacity |
+|---|---|---|---|---|
+| Macaw photo, JPEG 4016 × 6016 RGB (capacity 9,060,083 B) | 71.15 dB | 61.14 dB | 54.15 dB | 51.14 dB |
+| Parchment scroll, PNG 2000 × 1232 RGBA (capacity 923,987 B) | 71.36 dB | 61.36 dB | 54.27 dB | 51.25 dB |
+| Video clip, 640 × 360, 300 frames (capacity 25,919,987 B) — **pooled** PSNR (MSE over all frames) | 71.14 dB | 61.14 dB | 54.15 dB | 51.14 dB |
+| same clip — **mean** PSNR over modified frames only | 60.85 dB | 52.39 dB | 51.42 dB | 51.14 dB |
+
+Frames modified in the video: 4, 31, 151 and 300. The two video PSNRs differ at low payload
+because the pooled value also counts the unchanged frames, while the mean only averages
+the frames that carry message bits.
+
+The difference figure of the scroll shows vertical stripes. We measured why: the test
+message of `results.py` is printable ASCII, whose top bit is always 0, and a 2000-pixel
+row holds 6000 bits (a multiple of 8), so that bit always lands in the same columns. Most
+of the scroll's pixels are transparent with RGB 0 (last bit already 0), so at that bit
+position only 25.1 % of the values changed instead of about 50 %. In the macaw photo, whose
+last bits are close to random (50.1 % are 1), the same test message changed 50.0–50.1 % of
+the values at every bit position, so there are no stripes. The stripes come from the test
+message and the cover together, not from the method.
+
+The figures are written to `results/real/`, which is git-ignored because they show our
+own photos.
+
 ## Project files
 
 ```
@@ -300,9 +330,19 @@ Everything below was measured or verified in this project unless it says otherwi
 - **16-bit PNGs are rejected** ("16-bit PNGs are not supported"). Pillow silently reports
   16-bit RGB PNGs as 8-bit, so the app reads the PNG header itself to catch them.
 - **Large output video.** FFV1 is lossless, so the MKV is much bigger than a normal MP4.
-  In our 10 s 640 × 480 test: 1,236,974 bytes (H.264) → 13,497,659 bytes (FFV1), about
-  **11 ×** larger. The app warns for videos longer than 10 s or larger than 640 × 480.
+  On our real 10 s 640 × 360 clip (1,094,286 bytes, H.264) the stego MKV was
+  45,959,159 bytes at 1 % of capacity (**42 ×**) and 79,513,865 bytes at 100 % (**72.7 ×**).
+  On the synthetic 10 s 640 × 480 test clip it was only about **11 ×** (1,236,974 →
+  13,497,659 bytes). What we measured: per frame, the real clip's MKV took 153,197 bytes at
+  1 % against 53,991 bytes for the synthetic clip, although the real frames have fewer
+  pixels (2.8 × more per frame); and filling the capacity with message bits added another
+  33.6 MB. We did not study the FFV1 compression itself. The app warns for videos longer
+  than 10 s or larger than 640 × 480.
 - **Detectable by statistical analysis.** Plain LSB replacement is a well-known, easily
   detected method: statistical steganalysis (for example the chi-square attack or RS
   analysis) can reveal it, especially when a large part of the capacity is used.
-  **We did not test this ourselves.**
+  **We did not run a detection test ourselves.** What we *saw in our histograms*: LSB
+  replacement evens out each pair of values 2k and 2k+1. In the macaw photo at 100 %,
+  red value 232 went from 726,161 to 557,955 pixels and value 233 from 336,473 to
+  504,679 (the pair's total, 1,062,634, stays the same). This pair-evening is the effect
+  the chi-square attack looks for.

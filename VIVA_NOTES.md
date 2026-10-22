@@ -42,9 +42,13 @@ took 1.13 s to encode and 1.31 s to decode (one run).
 
 **SP6 – Metrics.** `metrics.py` computes MSE and PSNR; `results.py` runs experiments at
 1, 10, 50 and 100 % of capacity and writes `metrics.csv` and figures (side by side,
-difference ×255, histograms). On our synthetic 640×480 gradient image PSNR was 71.04 dB
-at 1 % and 51.14 dB at 100 %, and every message came back exactly. For video we report
-both the mean PSNR of the changed frames and the PSNR over all frames, clearly labelled.
+difference ×255, histograms). On our three real covers (a macaw photo, a transparent
+parchment PNG and a 10 s video clip) PSNR was about 71 dB at 1 % and 51.1–51.3 dB at
+100 %, and all 12 messages came back exactly; these numbers are measured on our covers,
+not a general rule. For video we report both the mean PSNR of the changed frames and the
+pooled PSNR over all frames, clearly labelled. The scroll's difference figure showed
+stripes; we measured that they come from our ASCII test message (its top bit is always 0)
+meeting the scroll's transparent pixels (RGB 0), not from the method.
 
 **SP7 – GUI.** A Tkinter window with Image/Video mode, cover and output selection, a
 message box, capacity and size labels, warnings, previews, a progress bar and a status
@@ -83,8 +87,12 @@ result is saved as PNG.
 **4. Why FFV1 in MKV for video?**
 Normal video codecs (H.264 in MP4) are lossy, like JPEG. FFV1 is a lossless codec; we
 proved that our frames come back bit-exact. MKV is a container that holds FFV1 and lets us
-copy the original audio unchanged. The cost is size: in our 10 s 640×480 test the MKV was
-13,497,659 bytes versus 1,236,974 bytes for the H.264 cover, about 11 times larger.
+copy the original audio unchanged. The cost is size: for our real 10 s 640×360 clip the MKV
+was 42 times larger than the H.264 cover at 1 % of capacity (45,959,159 vs 1,094,286 bytes)
+and 72.7 times larger at 100 % (79,513,865 bytes); for a synthetic test clip it was about
+11 times. Measured per frame, the real clip's MKV was 2.8 times bigger than the synthetic
+one's (153,197 vs 53,991 bytes), and the file grew as more last bits were changed
+(45.96 MB at 1 % → 79.51 MB at 100 %). We did not study the FFV1 compression itself.
 
 **5. What does PSNR mean?**
 Peak Signal-to-Noise Ratio compares the cover and the stego image:
@@ -95,9 +103,12 @@ with people looking at the images; PSNR is only a numerical measure.
 **6. Why is PSNR about 51 dB at full capacity?**
 At 100 % every last bit is overwritten by a message bit. For random-looking data about half
 of the bits already have the right value, so about half of the values change by 1. Then
-MSE ≈ 0.5 and PSNR = 10·log10(65025 / 0.5) ≈ 51.14 dB. Measured: 51.14 dB on our synthetic
-image, 51.20 dB on our synthetic video, and 51.1393 dB on 10 million random bytes. With
-less data, fewer values change and PSNR is higher (71.04 dB at 1 %).
+MSE ≈ 0.5 and PSNR = 10·log10(65025 / 0.5) ≈ 51.14 dB. Measured on our three real covers
+at 100 %: 51.14 dB (macaw), 51.25 dB (scroll), 51.14 dB (video, pooled); and 51.1393 dB on
+10 million random bytes. With less data, fewer values change and PSNR is higher (71.14–71.36
+dB at 1 % on our covers). These are measurements on our covers, not a general rule: a cover
+whose last bits are not random (like the scroll's black transparent area) gives a slightly
+different value.
 
 **7. What is the capacity?**
 One bit per R, G, B value: max message bytes = (W × H × 3 − 104) / 8, rounded down
@@ -113,8 +124,11 @@ for example "138 bytes but this cover holds at most 137 bytes". The GUI already 
 **9. Can it be detected?**
 Not by eye. But plain LSB replacement is a well-known method, and statistical
 steganalysis (for example the chi-square attack or RS analysis) is known to detect it,
-especially at high capacity. **We did not test this ourselves.** Also, anyone who knows our
-format can simply look for the `LSBS` signature.
+especially at high capacity. **We did not run a detection test ourselves.** But we saw the
+effect these attacks use in our own histograms: LSB replacement evens out each pair of
+values 2k and 2k+1. In the macaw photo at 100 %, red value 232 dropped from 726,161 to
+557,955 pixels and value 233 rose from 336,473 to 504,679, while the pair's total stayed
+1,062,634. Also, anyone who knows our format can simply look for the `LSBS` signature.
 
 **10. Is it secure?**
 No. It is hiding, not encryption. Anyone with this tool can read the message. For secrecy
