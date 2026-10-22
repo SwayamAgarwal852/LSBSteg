@@ -1,0 +1,279 @@
+SLIDE CORRECTIONS for LSB_Steganography.pptx
+=============================================
+
+The original deck is NOT edited by this project. This file lists, slide by slide, what no
+longer matches the finished project, with the exact current wording (read with markitdown
+0.1.9 on 2026-10-22) and a suggested replacement. The team edits the slides by hand.
+
+Main differences between the deck and the finished project:
+  * Delimiter        -> 13-byte header (signature "LSBS", version, length, CRC32); no delimiter.
+  * Image only       -> image AND video (video = the same method applied frame by frame).
+  * "Secure"         -> covert communication: hidden, NOT encrypted, NOT secure.
+  * Unmeasured claims ("visually identical", "no perceptible distortion") -> what we measured
+    (no visible difference in our side-by-side figures; PSNR values measured on our covers).
+    We did not run any test with human viewers.
+
+
+-------------------------------------------------------------------------------------------
+SLIDE 1 - Title
+-------------------------------------------------------------------------------------------
+1.1 Current:  "Design and Implementation of an
+               LSB-based Image Steganography System"
+    Replace:  "Design and Implementation of an
+               LSB-based Image and Video Steganography System"
+    Why:      the project also hides text in video (lossless FFV1 MKV output).
+
+1.2 Current:  "A project on secure covert communication using digital images"
+    Replace:  "A project on covert communication using digital images and video"
+    Why:      there is no encryption; the message is only hidden, so "secure" is not true.
+
+
+-------------------------------------------------------------------------------------------
+SLIDE 2 - Abstract
+-------------------------------------------------------------------------------------------
+2.1 Current:  "This project presents a multimedia system for securely embedding and extracting
+               secret text messages within digital images using Least Significant Bit (LSB)
+               steganography."
+    Replace:  "This project presents a multimedia system for hiding and extracting text
+               messages in digital images and videos using Least Significant Bit (LSB)
+               steganography. The message is hidden, not encrypted."
+
+2.2 Current:  "The technique exploits the human visual system's inability to perceive minor
+               changes in pixel intensity, allowing confidential data to be hidden without
+               visible distortion to the cover image."
+    Replace:  "Each colour value changes by at most 1 out of 255, so the text can be hidden
+               without any difference we could see in our side-by-side figures."
+    Why:      we did not test human perception; "confidential" suggests secrecy we do not give.
+
+2.3 Current:  "The system implements an encoder that converts the message into binary and
+               embeds it sequentially into image pixels with a delimiter marking the message
+               boundary, and a decoder that extracts and reconstructs the original message
+               from the stego-image."
+    Replace:  "The encoder converts the message to UTF-8 bits and writes them, after a 13-byte
+               header (signature, version, length, CRC32), into the last bits of the R, G, B
+               values of the image or of each video frame. The decoder reads the header, then
+               exactly 'length' bytes, checks the CRC32 and returns the exact message or a
+               clear error."
+
+2.4 Current:  "Stego-Image" / "Visually identical to the original"
+    Replace:  "Stego image / video" / "No visible difference in our side-by-side figures"
+
+2.5 Current:  "No perceptible distortion • Low computational complexity"
+    Replace:  "Max change 1 per colour value • PSNR 51.1-71.4 dB measured on our covers"
+
+
+-------------------------------------------------------------------------------------------
+SLIDE 3 - Objectives (Part 1 of 2)
+-------------------------------------------------------------------------------------------
+3.1 Current:  "Build an LSB-based image steganography system for securely hiding secret text
+               messages within digital images."
+    Replace:  "Build an LSB-based steganography system that hides text messages in images
+               (PNG output) and videos (lossless FFV1 MKV output, original audio kept)."
+
+3.2 Current:  "Convert the secret message into binary form and embed its data into the least
+               significant bits of image pixels."
+    Replace:  "Convert the message to UTF-8 bytes and bits (most significant bit first) and
+               embed them into the last bits of the R, G, B values (alpha never changed)."
+
+3.3 Current:  "Extract the hidden binary data from the stego-image and reconstruct the original
+               secret message."
+    Replace:  "Extract the hidden bits from the stego image or video, check them with CRC32
+               and reconstruct the exact message, or report a clear reason why not."
+
+    (Objective 03, "Hide the secret message while preserving the visual quality of the
+    original cover image.", still matches; optionally add "or video".)
+
+
+-------------------------------------------------------------------------------------------
+SLIDE 4 - Objectives (Part 2 of 2)
+-------------------------------------------------------------------------------------------
+4.1 Current:  "Message Boundary" / "Use a delimiter to accurately mark the end of the hidden
+               message for reliable extraction."
+    Replace:  "Message Boundary" / "Store the message length and a CRC32 checksum in a
+               13-byte header, so the decoder reads exactly the right number of bits and
+               detects damaged data."
+
+4.2 Current:  "Assess image quality, data-hiding capacity, extraction accuracy, and
+               computational simplicity."
+    Replace:  "Measure quality (MSE, PSNR), capacity, exact match and encode/decode time for
+               images and video."
+
+4.3 Current:  "Secure Communication" / "Demonstrate steganography's role in transmitting
+               sensitive information without revealing its presence."
+    Replace:  "Covert Communication" / "Show how a message can be hidden so that its presence
+               is not obvious. It is not encrypted: anyone with the tool can read it."
+
+    (Objective 06, "Minimize perceptible changes to the cover image by modifying only the
+    least significant bits.", still matches.)
+
+
+-------------------------------------------------------------------------------------------
+SLIDE 5 - How LSB Steganography Works
+-------------------------------------------------------------------------------------------
+5.1 Current:  "+ delimiter"   (in the pipeline diagram)
+    Replace:  "+ 13-byte header in front"
+
+5.2 Current:  "looks identical"
+    Replace:  "no visible difference"
+
+5.3 Current:  "Changing only the last (least significant) bit alters the pixel's intensity by
+               at most 1 out of 256 levels — a change far too small for the human eye to
+               detect."
+    Replace:  "Changing only the last (least significant) bit alters a colour value by at most
+               1 out of 256 levels — in our figures the change only becomes visible when it is
+               multiplied by 255."
+
+5.4 Current:  "A special delimiter sequence is embedded after the message so the decoder knows
+               exactly where the hidden data ends."
+    Replace:  "A 13-byte header (signature 'LSBS', version, message length, CRC32) is embedded
+               BEFORE the message, so the decoder knows exactly how many bits to read and can
+               check that they are correct."
+
+    Checked and still correct: "HELLO" -> 01001000 01000101 ... ('H' = 72, 'E' = 69).
+
+
+-------------------------------------------------------------------------------------------
+SLIDE 6 - System Architecture
+-------------------------------------------------------------------------------------------
+Encoder
+6.1 Current:  "Read cover image and secret message"
+    Replace:  "Read the cover image (Pillow) or video frames (FFmpeg) and the message"
+6.2 Current:  "Convert message text to binary"
+    Replace:  "Convert the message to UTF-8 bits and build the 13-byte header"
+6.3 Current:  "Append end-of-message delimiter"
+    Replace:  "Put the header (length + CRC32) in front of the message bits"
+6.4 Current:  "Replace LSBs of pixel bytes sequentially"
+    Replace:  "Replace the LSBs of the R, G, B bytes in order (frame after frame for video)"
+6.5 Current:  "Save result as the stego-image"
+    Replace:  "Save as PNG (image) or FFV1 MKV with the original audio copied (video)"
+
+Decoder
+6.6 Current:  "Read the stego-image pixel data"
+    Replace:  "Read the stego image pixels or the video frames"
+6.7 Current:  "Reassemble bits into binary stream"
+    Replace:  "Read the 104 header bits; check signature, version and length"
+6.8 Current:  "Detect the delimiter to stop reading"
+    Replace:  "Read exactly 'length' bytes, then stop (video: FFmpeg is stopped early)"
+6.9 Current:  "Convert binary back to original text"
+    Replace:  "Check the CRC32, convert UTF-8 back to text, or report a clear error"
+
+    (Decoder step "Extract the LSB of each pixel byte" still matches.)
+
+
+-------------------------------------------------------------------------------------------
+SLIDE 7 - Conclusion
+-------------------------------------------------------------------------------------------
+7.1 Current:  "The stego-image produced is visually indistinguishable from the original cover
+               image."
+    Replace:  "The stego images and video showed no visible difference in our side-by-side
+               figures; PSNR measured on our three covers was 51.1-71.4 dB."
+
+7.2 Current:  "A delimiter-based boundary ensures accurate and reliable message extraction."
+    Replace:  "A length + CRC32 header gives exact extraction (all 12 real-cover runs exact)
+               and detects damaged data instead of returning wrong text."
+
+7.3 Current:  "Demonstrates a practical, real-world application of steganography in secure
+               multimedia communication."
+    Replace:  "Demonstrates covert (not secure) communication with images and video. The
+               message survives only lossless handling: JPEG, lossy video re-encoding,
+               resizing and cropping destroy it."
+
+    ("LSB substitution offers an effective, low-complexity approach for hiding text data."
+    still matches.)
+
+
+===========================================================================================
+MATERIAL FOR NEW SLIDES (real numbers only)
+===========================================================================================
+
+Source: results/real/metrics.csv, run on 2026-10-22 with
+  results.py --label real  (covers are the team's own files; 1/10/50/100 % of capacity).
+Every one of the 12 runs decoded to the exact message.
+PSNR for images is computed on R, G, B only (alpha checked byte-identical).
+Times are single runs on the development laptop (Windows 11, Python 3.13.2, FFmpeg 9.0.2).
+
+A. RESULTS - images
+   Macaw photo: JPEG 4016 x 6016 RGB, capacity 9,060,083 bytes, cover file 15,126,333 bytes
+     %    message B    MSE        PSNR      encode s  decode s  stego PNG bytes
+     1       90,600    0.004994   71.15 dB  2.49      0.49      31,619,176
+     10     906,008    0.049983   61.14 dB  2.63      0.59      32,839,700
+     50   4,530,041    0.250074   54.15 dB  2.85      0.75      36,013,653
+     100  9,060,083    0.500006   51.14 dB  3.48      1.39      38,511,756
+
+   Parchment scroll: PNG 2000 x 1232 RGBA, capacity 923,987 bytes, cover file 976,411 bytes
+     %    message B    MSE        PSNR      encode s  decode s  stego PNG bytes
+     1        9,239    0.004751   71.36 dB  0.73      0.17        993,210
+     10      92,398    0.047506   61.36 dB  0.84      0.19      1,166,265
+     50     461,993    0.243306   54.27 dB  1.16      0.28      1,909,543
+     100    923,987    0.487548   51.25 dB  1.56      0.145     2,847,026
+
+B. RESULTS - video
+   clip_640.mp4: H.264 640 x 360, 10 s, 300 frames, 30 fps, AAC audio,
+   capacity 25,919,987 bytes, cover file 1,094,286 bytes.
+   POOLED PSNR = PSNR of the MSE averaged over ALL 300 frames.
+   MEAN PSNR (modified) = average of the per-frame PSNRs over the modified frames only.
+     %    message B     pooled MSE  POOLED PSNR  MEAN PSNR (modified)  frames modified  encode s  decode s  stego MKV bytes
+     1       259,199    0.005006    71.14 dB     60.85 dB                4               1.40      2.35      45,959,159
+     10    2,591,998    0.049999    61.14 dB     52.39 dB               31               2.42      4.00      49,127,991
+     50   12,959,993    0.250047    54.15 dB     51.42 dB              151               3.06      6.11      62,578,443
+     100  25,919,987    0.500058    51.14 dB     51.14 dB              300               4.03     10.52      79,513,865
+   Stego MKV vs cover: 42.0 x larger at 1 %, 72.7 x at 100 %.
+   ffprobe on a stego MKV made through the GUI code path: same 300 frames, 30/1 frame rate,
+   AAC 48 kHz stereo with an identical audio packet hash (SHA-256 ea948452...afffc69).
+
+C. Other measured numbers
+   * Theory check: 10,000,000 random bytes with every LSB replaced -> MSE 0.500206,
+     PSNR 51.1393 dB (theory 0.5 and 51.1411 dB).
+   * Synthetic timing test (SP5): 10 s 640x480 25 fps clip with a 1,000,008-byte message:
+     encode 1.13 s, decode 1.31 s; MKV 13,497,659 bytes vs 1,236,974 bytes H.264 (10.9 x).
+   * Synthetic image test (SP4): 4000 x 3000 RGB, 1,020,000-byte message: encode 4.68 s,
+     decode 0.71 s.
+   * Automated tests: 181 passed (clean run, twice; also in a fresh clone with a new venv).
+
+D. LIMITATIONS - measured or verified in this project
+   * JPEG re-save (quality 95, and quality 100 with 4:4:4) of a stego PNG
+     -> "No hidden message"; only 51-62 % of the hidden bits survived (chance = 50 %).
+   * H.264 re-encode of a stego MKV (ffmpeg defaults, yuv420p, and crf 0 yuv444p)
+     -> "No hidden message". Exception: libx264rgb -crf 0 (lossless RGB) kept the message.
+   * Resize to 99 %, or crop 1 pixel from the left or top -> message lost. Cropping the right
+     or bottom edge keeps it only if no message pixels are removed (52-byte message survived a
+     1-pixel right crop of a 320-pixel-wide image; a 3,000-byte message did not).
+   * When a damaged file fails, the decoder reports an error; it never returned wrong text.
+   * Phone-video rotation: FFmpeg's default auto-rotation scrambles the bits (first hidden
+     bytes became ff ff ff ff instead of "LSBS"); we read/write with -noautorotate and copy
+     the rotation angle. A flip in the display matrix is not carried over (verified).
+   * Variable-frame-rate videos and 16-bit PNGs are rejected with a clear message.
+   * Output video size: 42 x (1 %) to 72.7 x (100 %) larger than the H.264 cover for our real
+     clip; 10.9 x for the synthetic test clip.
+   * Histograms (seen in our data; no detection test run): LSB replacement evens out value
+     pairs. Macaw, red, 100 %: value 232 went 726,161 -> 557,955 pixels, value 233
+     336,473 -> 504,679; the pair total 1,062,634 is unchanged. This is the effect the
+     chi-square attack uses. WE DID NOT RUN A DETECTION TEST.
+   * No encryption: anyone who knows the format can read the message ("LSBS" signature).
+   * Text only.
+
+E. FIGURE FILES (on the development laptop; results/real/ is git-ignored because the
+   figures show the team's own photos and video)
+   C:\Users\HP\LSBSteg\results\real\real_image_closeup-scarlet-macaw-from-side-view-scarlet-macaw-closeup-head_side_by_side.png
+   C:\Users\HP\LSBSteg\results\real\real_image_closeup-scarlet-macaw-from-side-view-scarlet-macaw-closeup-head_difference_x255.png
+   C:\Users\HP\LSBSteg\results\real\real_image_closeup-scarlet-macaw-from-side-view-scarlet-macaw-closeup-head_histogram.png
+   C:\Users\HP\LSBSteg\results\real\real_image_realistic-open-parchment-scroll-transparent_side_by_side.png
+   C:\Users\HP\LSBSteg\results\real\real_image_realistic-open-parchment-scroll-transparent_difference_x255.png
+   C:\Users\HP\LSBSteg\results\real\real_image_realistic-open-parchment-scroll-transparent_histogram.png
+   C:\Users\HP\LSBSteg\results\real\real_video_clip_640_side_by_side.png
+   C:\Users\HP\LSBSteg\results\real\real_video_clip_640_difference_x255.png
+   C:\Users\HP\LSBSteg\results\real\real_video_clip_640_histogram.png
+   C:\Users\HP\LSBSteg\results\real\real_image_macaw_zoom64_prose.png
+   C:\Users\HP\LSBSteg\results\real\real_image_scroll_zoom64_prose.png
+
+   Notes for choosing figures:
+   * All results.py figures are at 100 % of capacity (the largest payload).
+   * The macaw "difference_x255" looks uniformly grey because a 24-megapixel image is shrunk
+     to about 350 pixels wide in the figure; use real_image_macaw_zoom64_prose.png
+     (64 x 64 pixels at native size, cover | stego | difference x 255) to show the real
+     0/1 pattern.
+   * The vertical stripes in the scroll "difference_x255" come from the ASCII test message
+     (top bit always 0) meeting the scroll's transparent RGB-0 pixels, not from the method.
+   * The zoom figures used a prose message (the text of README.md + VIVA_NOTES.md, repeated
+     to 100 % of capacity); both decoded exactly.
+   * The histogram figures show the value-pair evening described in D.
