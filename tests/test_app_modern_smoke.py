@@ -100,6 +100,23 @@ def test_window_builds(gui):
     assert boxes == []
 
 
+def test_window_fits_screen_and_content_fits_window(gui):
+    """All in physical pixels. Measured bug this guards against: at 125 % the first
+    version was 1393x997 px with 964 px of content in a 950 px window, and its
+    bottom edge was below the screen."""
+    window, boxes = gui
+    root = window.root
+    root.update()
+    scale = ctk.ScalingTracker.get_window_scaling(root)
+    w, h, x, y = window.window_box
+    left, top, work_w, work_h = app_modern.screen_work_area(root)
+    assert root.winfo_reqwidth() <= round(w * scale)
+    assert root.winfo_reqheight() <= round(h * scale)
+    assert x >= left and y >= top
+    assert x + round(w * scale) + 18 <= left + work_w  # 18 x 47 = border and title bar
+    assert y + round(h * scale) + 47 <= top + work_h
+
+
 def test_validation_error_shows_box_and_keeps_buttons_enabled(gui):
     window, boxes = gui
     window.start_encode()

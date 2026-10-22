@@ -306,6 +306,25 @@ class Worker:
 
 DIFF_CROP = (320, 240)  # (width, height) of the 1:1 difference view
 TINY_PAYLOAD_PERCENT = 1.0  # below this, warn that PSNR is very high
+WINDOW_FRAME = (20, 60)  # physical pixels for border + title bar (measured: 18 x 47 at 125 %)
+
+
+def fit_window(work_left: int, work_top: int, work_w: int, work_h: int, scale: float,
+               wanted=(1040, 700)):
+    """Window size (logical units, as CustomTkinter's geometry() takes them) and
+    position (physical pixels) so the whole window, frame included, fits in the
+    usable screen area (taskbar excluded; all inputs in physical pixels).
+
+    CustomTkinter multiplies width/height by the display scale (e.g. 1.25 at 125 %)
+    but not x/y. Measured on a 1920x1080 screen at 125 %: a 1100x760 window became
+    1393x997 pixels and its bottom was off-screen.
+    """
+    max_w = int((work_w - WINDOW_FRAME[0]) / scale)
+    max_h = int((work_h - WINDOW_FRAME[1]) / scale)
+    w, h = min(wanted[0], max_w), min(wanted[1], max_h)
+    x = work_left + max(0, (work_w - round(w * scale) - WINDOW_FRAME[0]) // 2)
+    y = work_top + max(0, (work_h - round(h * scale) - WINDOW_FRAME[1]) // 2)
+    return w, h, x, y
 
 
 @dataclass

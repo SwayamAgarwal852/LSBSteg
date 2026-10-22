@@ -54,6 +54,28 @@ def test_capacity_usage_without_cover():
     assert logic.capacity_usage("hi", 0) is None
 
 
+# ---------------------------------------------------------------- window size
+
+@pytest.mark.parametrize("work, scale", [
+    ((0, 0, 1920, 1032), 1.25),  # this laptop: 1920x1080, taskbar 48 px at the bottom
+    ((0, 0, 1920, 1040), 1.0), ((0, 0, 1366, 728), 1.0), ((0, 0, 1366, 728), 1.25),
+    ((0, 0, 1280, 680), 1.5), ((0, 0, 3840, 2100), 2.0), ((60, 0, 1860, 1080), 1.25),  # taskbar left
+])
+def test_fit_window_always_fits_the_work_area(work, scale):
+    left, top, work_w, work_h = work
+    w, h, x, y = logic.fit_window(*work, scale)
+    frame_w, frame_h = 18, 47  # border and title bar measured at 125 %
+    assert x >= left and y >= top
+    assert x + round(w * scale) + frame_w <= left + work_w
+    assert y + round(h * scale) + frame_h <= top + work_h
+    assert (w, h) <= (1040, 700)
+
+
+def test_fit_window_keeps_wanted_size_when_it_fits():
+    assert logic.fit_window(0, 0, 1920, 1032, 1.25)[:2] == (1040, 700)
+    assert logic.fit_window(0, 0, 1366, 728, 1.0)[:2] == (1040, 668)  # 728 - 60 frame
+
+
 # ---------------------------------------------------------------- drag and drop
 
 def test_dropped_file_single_path_with_spaces():

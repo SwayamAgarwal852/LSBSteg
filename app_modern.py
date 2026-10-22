@@ -10,6 +10,7 @@ Drag and drop is optional: it needs the tkinterdnd2 package. If that is
 missing or cannot load, the app works the same with the Browse buttons.
 """
 
+import sys
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox
@@ -23,6 +24,7 @@ POLL_MS = 100
 TITLE = "LSB Steganography - Modern"
 NOTE_COLOUR = ("#a15c00", "#f0b45a")  # (light mode, dark mode)
 BAR_OK, BAR_OVER = ("#3a7ebf", "#1f6aa5"), ("#c0392b", "#e74c3c")
+PREVIEW_DISPLAY = (240, 180)  # previews are shown at most this big; the difference crop is this size at 1:1
 MODES = {"Image": IMAGE, "Video": VIDEO}
 COVER_TYPES = {
     IMAGE: [("Images", "*.png *.jpg *.jpeg *.bmp"), ("All files", "*.*")],
@@ -37,6 +39,26 @@ ABOUT = (
     "The message is destroyed by JPEG re-saving, lossy video re-encoding (e.g. MP4, social media, "
     "messaging apps), resizing and most cropping. See README.md (Limitations) for what we measured."
 )
+
+
+def screen_work_area(root):
+    """(left, top, width, height) of the usable screen area in physical pixels.
+
+    Tk's winfo_screenwidth() is read before CustomTkinter switches the process to
+    DPI awareness, so at 125 % it reports 1536x864 instead of 1920x1080 (measured).
+    On Windows the work area (taskbar excluded) is asked from Win32 instead.
+    """
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            import ctypes.wintypes as wintypes
+            rect = wintypes.RECT()
+            if ctypes.windll.user32.SystemParametersInfoW(0x0030, 0, ctypes.byref(rect), 0):  # SPI_GETWORKAREA
+                return rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top
+        except Exception:  # fall back to Tk's numbers below
+            pass
+    scale = ctk.ScalingTracker.get_window_scaling(root)
+    return 0, 0, round(root.winfo_screenwidth() * scale), round(root.winfo_screenheight() * scale)
 
 
 def enable_drag_and_drop(root) -> bool:
@@ -61,8 +83,11 @@ class ModernApp:
         self._stego_preview = None  # PIL image, to restore after the difference view
 
         root.title(TITLE)
-        root.geometry("1100x760")
-        root.minsize(980, 700)
+        scale = ctk.ScalingTracker.get_window_scaling(root)
+        w, h, x, y = logic.fit_window(*screen_work_area(root), scale)
+        self.window_box = (w, h, x, y)  # logical size, physical position (checked by the tests)
+        root.geometry(f"{w}x{h}+{x}+{y}")
+        root.minsize(min(900, w), min(600, h))
         root.report_callback_exception = lambda exc_type, exc, tb: self.show_error(exc)
         root.protocol("WM_DELETE_WINDOW", self.on_close)
 
@@ -127,11 +152,11 @@ class ModernApp:
         self.capacity_bar.set(0)
         self.capacity_bar.grid(row=4, column=0, columnspan=2, sticky="ew", pady=(0, 4))
         self.notes_label = ctk.CTkLabel(left, text="", text_color=NOTE_COLOUR, anchor="w",
-                                        justify="left", wraplength=560)
+                                        justify="left", wraplength=440)
         self.notes_label.grid(row=5, column=0, columnspan=2, sticky="w")
 
         ctk.CTkLabel(left, text="Message", anchor="w").grid(row=6, column=0, sticky="w", pady=(6, 0))
-        self.message_box = ctk.CTkTextbox(left, height=150, wrap="char")
+        self.message_box = ctk.CTkTextbox(left, height=90, wrap="char")
         self.message_box.grid(row=7, column=0, sticky="nsew")
         self.message_box.bind("<<Modified>>", self.on_message_change)
         side = ctk.CTkFrame(left, fg_color="transparent")
@@ -153,19 +178,20 @@ class ModernApp:
         self.encode_btn.grid(row=11, column=0, sticky="w", pady=10)
 
         right = ctk.CTkFrame(tab)
-        right.grid(row=0, column=1, sticky="nsew")
+        right.grid(row=0, column=1, sticky="new")
         self.preview_labels = {}
-        for row, name in enumerate(("Cover", "Stego")):
-            ctk.CTkLabel(right, text=name, font=ctk.CTkFont(weight="bold")).grid(row=2 * row, column=0, pady=(8, 0))
-            label = ctk.CTkLabel(right, text="(no preview)", width=330, height=250)
-            label.grid(row=2 * row + 1, column=0, padx=10)
+        for col, name in enumerate(("Cover", "Stego")):  # side by side
+            ctk.CTkLabel(right, text=name, font=ctk.CTkFont(weight="bold")).grid(row=0, column=col, pady=(8, 0))
+            label = ctk.CTkLabel(right, text="(no preview)", width=PREVIEW_DISPLAY[0] + 6,
+                                 height=PREVIEW_DISPLAY[1] + 6)
+            label.grid(row=1, column=col, padx=6)
             self.preview_labels[name] = label
         self.diff_switch = ctk.CTkSwitch(right, text="Show difference x255", command=self.on_diff_toggle,
                                          state="disabled")
-        self.diff_switch.grid(row=4, column=0, pady=(6, 0))
-        self.diff_caption = ctk.CTkLabel(right, text="Available after encoding.", wraplength=320,
+        self.diff_switch.grid(row=2, column=0, columnspan=2, pady=(10, 0))
+        self.diff_caption = ctk.CTkLabel(right, text="Available after encoding.", wraplength=480,
                                          justify="left", font=ctk.CTkFont(size=12))
-        self.diff_caption.grid(row=5, column=0, padx=10, pady=(0, 8))
+        self.diff_caption.grid(row=3, column=0, columnspan=2, padx=10, pady=(0, 8))
 
     def _build_reveal(self, tab):
         tab.columnconfigure(0, weight=1)
@@ -247,6 +273,9 @@ class ModernApp:
             self._images.pop(name, None)
             label.configure(image="", text="(no preview)")  # "" (not None) clears a CTkLabel image
             return
+        if pil_image.width > PREVIEW_DISPLAY[0] or pil_image.height > PREVIEW_DISPLAY[1]:
+            pil_image = pil_image.copy()
+            pil_image.thumbnail(PREVIEW_DISPLAY)  # display only; never applied to the difference crop
         image = ctk.CTkImage(light_image=pil_image, dark_image=pil_image, size=pil_image.size)
         self._images[name] = image
         label.configure(image=image, text="")
@@ -435,7 +464,7 @@ class ModernApp:
             return
         if self.diff_switch.get():
             mode, cover, stego = self.last_encode[:3]
-            self.start_job("difference", logic.difference_crop, mode, cover, stego,
+            self.start_job("difference", logic.difference_crop, mode, cover, stego, PREVIEW_DISPLAY,
                            text="Computing the difference view...")
         else:
             self.set_preview("Stego", self._stego_preview)
