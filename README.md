@@ -24,6 +24,9 @@ who knows it. If the message itself must stay secret, encrypt it before hiding i
 - A 13-byte header with the message length and a CRC32 checksum detects damaged data.
 - Tkinter GUI: capacity shown before encoding, warnings, cover/stego previews, progress
   bar, the window stays responsive during long jobs (work runs in a background thread).
+- Optional modern window (`app_modern.py`, CustomTkinter): dark/light mode, tabs, live
+  capacity bar, a 1:1 "show difference" view, a "Measure quality" panel and optional drag
+  and drop. The classic window stays the default.
 - `results.py` measures MSE, PSNR, timings and file sizes and draws figures.
 
 ## Requirements
@@ -86,7 +89,17 @@ If PowerShell blocks `Activate.ps1`, run this once:
 `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`. You can also skip activation and
 call `.\.venv\Scripts\python.exe` directly.
 
-`requirements.txt` contains the exact versions tested on Python 3.13.2.
+`requirements.txt` contains the exact versions tested on Python 3.13.2 (including
+CustomTkinter 6.0.0 for the optional modern window).
+
+**Optional: drag and drop** in the modern window needs one more package:
+
+```powershell
+python -m pip install -r requirements-dnd.txt
+```
+
+Without it (just skip this command) the modern window works the same: the drop area then
+says "Drag and drop is not available; use the Browse button".
 
 ### 4. Check the setup
 
@@ -102,7 +115,16 @@ From the project folder:
 .\.venv\Scripts\python.exe app.py
 ```
 
-(or `python app.py` if the virtual environment is activated).
+(or `python app.py` if the virtual environment is activated). This is the classic window
+and it stays the default.
+
+**Optional modern window** (CustomTkinter, dark/light mode):
+
+```powershell
+.\.venv\Scripts\python.exe app_modern.py
+```
+
+It uses exactly the same checks, warnings, error messages and engine as the classic window.
 
 ## Using the GUI
 
@@ -134,6 +156,37 @@ Very long messages with very long lines are only previewed in the window (Tk fre
 huge single lines); Copy/Save always use the full, exact text.
 
 A full manual test list is in `GUI_CHECKLIST.md`.
+
+**The modern window** (`app_modern.py`) works the same way, arranged in three tabs:
+
+- **Hide message:** cover, a live capacity bar under "Capacity: ..." (it fills as you type
+  and turns red when the message is too long), message, output, **Encode (hide message)**.
+  Cover and stego previews are side by side. After encoding, **Show difference x255**
+  replaces the stego preview with the top-left 240 x 180 pixels at 1:1: a value that
+  changed by 1 is shown white/coloured, an unchanged value black.
+- **Reveal message:** file to decode, **Decode (reveal message)**, result, Copy / Save.
+- **Results / About:** **Measure quality of the last encode** computes MSE and PSNR with
+  `metrics.py` only when pressed (it reads both files again: about 1.4 s for a 24-megapixel
+  photo and 4.8 s for a 10 s 640 x 360 video on the development laptop). Images: R, G, B
+  only. Video: PSNR pooled over all frames and the mean over modified frames, both
+  labelled. A very small message gives a very high PSNR; the panel says so.
+- A **Dark mode** switch and an **Image / Video** switch are at the top.
+- There is a moving "busy" bar but **no percentage and no Cancel button**, on purpose: the
+  engine has no hook for them and we chose not to change the engine.
+
+**Testing drag and drop yourself** (needs `requirements-dnd.txt`; we could not test a real
+drop automatically):
+
+1. Start `app_modern.py`. The area under **Browse cover...** must say "Or drag and drop
+   one file here".
+2. From File Explorer, drag one PNG/JPEG onto that area (on the text and on the border).
+   Expected: the cover path, capacity and preview appear, exactly as with Browse.
+3. Drag two files at once. Expected: "Please drop exactly one file."
+4. Drag a file whose name has spaces and non-English letters (e.g. `cover photo é.png`).
+   Expected: it works.
+5. In Video mode drag a video; in Image mode drag a video. Expected: the same messages as
+   with Browse ("This looks like an image..." / "Image mode accepts PNG, JPEG or BMP...").
+6. On the **Reveal message** tab, drag a stego file onto its area, then Decode.
 
 ## How it works (in simple words)
 
@@ -212,9 +265,10 @@ rate videos, files that are not images/videos.
 .\.venv\Scripts\python.exe -m pytest
 ```
 
-There are 181 tests (bit engine, header, image and video pipelines, metrics, GUI logic,
-a GUI smoke test and the negative demonstrations). A full run took 29–104 s on the
-development laptop. Video tests are skipped if FFmpeg is not installed. Every test works in
+There are 219 tests (bit engine, header, image and video pipelines, metrics, GUI logic,
+GUI smoke tests for both windows and the negative demonstrations). A full run took
+between about 20 s and 104 s on the development laptop. The modern-window tests are
+skipped if CustomTkinter is not installed. Video tests are skipped if FFmpeg is not installed. Every test works in
 its own temporary folder; nothing is written into the project folder.
 
 ## Regenerating the results (`results.py`)
@@ -275,7 +329,8 @@ own photos.
 ## Project files
 
 ```
-app.py            Tkinter GUI (entry point: python app.py) - widgets only
+app.py            classic Tkinter GUI (default; python app.py) - widgets only
+app_modern.py     optional modern CustomTkinter GUI (python app_modern.py) - widgets only
 gui_logic.py      everything the GUI needs without widgets: checks, messages, worker thread
 encoder.py        encode_image(), encode_video()
 decoder.py        decode_image(), decode_video()
@@ -286,9 +341,10 @@ video_utils.py    ffprobe, FFmpeg frame reader and writer (pipes)
 errors.py         one exception class per kind of error
 metrics.py        MSE, PSNR, capacity, timing
 results.py        experiment runner -> metrics.csv + figures
-tests/            pytest test suites (181 tests)
+tests/            pytest test suites (219 tests)
 pytest.ini        pytest settings
 requirements.txt  exact package versions
+requirements-dnd.txt  optional: tkinterdnd2 for drag and drop in the modern window
 PLAN.md           approved plan, assumptions, decisions, progress
 GUI_CHECKLIST.md  manual GUI test list
 VIVA_NOTES.md     plain-language notes and likely viva questions

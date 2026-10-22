@@ -82,7 +82,7 @@ contourpy 1.4.0 declare `Requires-Python >=3.12`, so older Pythons cannot instal
 | # | Decision |
 |---|---|
 | D1 | Python 3.12+ (3.13.2 tested) in `.venv`. |
-| D2 | Tkinter GUI, one window. Encode/decode logic never imports tkinter. |
+| D2 | Tkinter GUI. Encode/decode logic never imports tkinter. **Updated 2026-10-22 (branch `ui-modern`):** two windows on top of the same `gui_logic.py`: the classic `app.py` (plain Tkinter, unchanged, still the default) and an optional modern `app_modern.py` (CustomTkinter 6.0.0; drag and drop optional via tkinterdnd2 0.6.4 in `requirements-dnd.txt`). **Skipped on purpose:** video progress percentage and a Cancel button — the engine has no progress/cancel hook and the team decided not to change the engine; the modern window shows a moving busy bar. |
 | D3 | 1 LSB per R, G, B byte. Alpha never touched. No 2-LSB option. |
 | D4 | Length header + CRC32, no delimiter (layout in §5). |
 | D5 | Image output always PNG. JPEG/BMP accepted as cover (read only; note shown for JPEG). 16-bit PNGs rejected with a clear message. |
@@ -286,6 +286,19 @@ LSBSteg/
   unchanged (cd5dd816…).
 - Clean run: 181 passed.
 - NOT done: the team has not run `GUI_CHECKLIST.md` by hand yet.
+
+### ui-modern progress (2026-10-22) — branch `ui-modern`, not pushed
+- Verified before coding: customtkinter 6.0.0 (+darkdetect 0.8.0) and tkinterdnd2 0.6.4 work on
+  Python 3.13.2 / Tk 8.6; CTk leaves timers that print 'invalid command name' after destroy ->
+  fixed by cancelling all timers at Tcl level before destroy (after_cancel() crashes there);
+  CTkLabel ignores image=None (use ""); CTkTextbox is a tk.Text (long-line guard reused).
+- Done: gui_logic helpers + tests (capacity bar, dropped file, 1:1 difference crop, quality
+  panel, fit_window); app_modern.py; smoke tests incl. stderr-empty check in a subprocess with
+  and without tkinterdnd2; window-size bug found on the real screen (125 %: bottom off-screen)
+  and fixed via Win32 work area; requirements.txt + requirements-dnd.txt; README; checklist.
+- Engine files, app.py and the 181 original tests unchanged.
+- Remaining: deliberate breakage, clean run, fresh clone; the team clicks through
+  GUI_CHECKLIST.md section 8 and tests a real drag and drop.
 
 ## 8. Risks
 

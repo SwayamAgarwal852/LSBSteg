@@ -109,6 +109,41 @@ cd ..
 - [ ] 7.1 With a cover loaded, switch Image → Video → Image. Expected: cover, output, file to decode, capacity, notes and previews are cleared each time; the message text stays.
 - [ ] 7.2 Close the window with the X button when idle. Expected: it closes at once and the console stays empty.
 
+---
+
+## 8. Modern window (`app_modern.py`, optional)
+
+Start it from the project folder (the classic window above is unchanged):
+
+```powershell
+.\.venv\Scripts\python.exe app_modern.py
+```
+
+Use the files from step 0. The console must stay **empty** the whole time, including after
+closing.
+
+- [ ] 8.1 The window opens fully on the screen (title bar, the **Encode (hide message)** button and the "Ready." status line at the bottom are all visible). Title "LSB Steganography - Modern"; tabs "Hide message", "Reveal message", "Results / About"; Mode = **Image**.
+- [ ] 8.2 Turn **Dark mode** on and off. Expected: the whole window switches between dark and light; nothing else changes.
+- [ ] 8.3 **Browse cover...** -> `cover.png`. Expected: "Capacity: up to 44,987 bytes ..."; orange PNG note; cover preview; Output file filled with `...\gui_test\cover_stego.png`.
+- [ ] 8.4 Type `Hello`. Expected: the capacity bar barely moves (blue) and the size line says "5 bytes ... 0.0% of capacity". Load `huge.txt`. Expected: within a second the box shows "[Message loaded from huge.txt ...]", the bar is full and **red**, and the size line says "TOO LONG". **Clear message**: the bar goes back to empty.
+- [ ] 8.5 Load `hindi.txt`, **Encode**. Expected: buttons greyed and the bottom bar moving while it works; "Done" box; stego preview next to the cover preview; "Message hidden in cover_stego.png (...)".
+- [ ] 8.6 Turn **Show difference x255** on. Expected: the Stego preview becomes a black image with white/coloured dots in the first rows only (the message is short), caption "Difference x255: top-left 240x180 pixels at 1:1 ...". Turn it off: the stego preview comes back.
+- [ ] 8.7 **Results / About** -> **Measure quality of the last encode**. Expected: the panel shows "not a general rule", "MSE (R, G, B values only; alpha not included)", "PSNR (R, G, B values only)", "Encode time", "Capacity used" and the note that a very small message gives a very high PSNR. Nothing was measured before you pressed the button.
+- [ ] 8.8 **Reveal message** tab: "File to decode" already shows `cover_stego.png`. **Decode**. Expected: exactly the Hindi text and emoji. **Copy result** and **Save result...** give identical text.
+- [ ] 8.9 Repeat the error checks 3.1-3.12 in the modern window (Hide tab for encode errors, Reveal tab for decode errors). Expected: the same message boxes and texts as the classic window; buttons usable again afterwards.
+- [ ] 8.10 Video: switch Mode to **Video** (cover, output and previews are cleared, the message stays). Cover = `clip.mp4`: the MKV note appears, no "Large video" note. Encode, then Decode on the Reveal tab: the message comes back exactly. Then **Measure quality**: the panel names "pooled over all 100 frames" and "mean over the ... modified frames only".
+- [ ] 8.11 Cover = `big.mp4`, encode `x`; while it runs, move the window (it must stay responsive) and try to close it. Expected: "Please wait - A task is still running..."; after "Done", closing works.
+- [ ] 8.12 Close the window with X when idle. Expected: it closes at once; the console stays empty (no "invalid command name ...").
+
+### 8b. Drag and drop (only if `requirements-dnd.txt` is installed)
+
+- [ ] 8.13 The area under **Browse cover...** says "Or drag and drop one file here". (Without tkinterdnd2 it says "Drag and drop is not available; use the Browse button" and everything else still works.)
+- [ ] 8.14 Drag `cover.png` from File Explorer onto that area (once on the text, once near the border). Expected: same result as 8.3.
+- [ ] 8.15 Drag two files at once. Expected: "Please drop exactly one file."
+- [ ] 8.16 Rename a copy to `cover photo é.png` and drag it. Expected: it works.
+- [ ] 8.17 In Image mode drag `clip.mp4`. Expected: "Image mode accepts PNG, JPEG or BMP files. For a video, switch to Video mode."
+- [ ] 8.18 On the **Reveal message** tab drag `cover_stego.png` onto its area, then **Decode**. Expected: the hidden message.
+
 Not testable by hand (covered by automated tests): "Video processing failed"
 (ffmpeg crashing in the middle) and "Nothing to hide" from the engine (the GUI
 already stops an empty message in step 3.2).

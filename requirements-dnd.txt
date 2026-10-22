@@ -1,0 +1,4 @@
+# Optional: drag and drop of files in the modern window (app_modern.py).
+# Without it the modern window works the same with the Browse buttons.
+# Install after requirements.txt:  python -m pip install -r requirements-dnd.txt
+tkinterdnd2==0.6.4

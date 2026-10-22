@@ -1,6 +1,8 @@
 colorama==0.4.6
 contourpy==1.4.0
+customtkinter==6.0.0
 cycler==0.12.1
+darkdetect==0.8.0
 fonttools==4.67.0
 iniconfig==2.3.1
 kiwisolver==1.5.1
