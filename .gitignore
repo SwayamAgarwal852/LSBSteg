@@ -11,3 +11,6 @@ __pycache__/
 
 # Synthetic test output from results.py (not for slides)
 results/synthetic/
+
+# Real results: figures show the team's own photos/video (private, not committed)
+results/real/
