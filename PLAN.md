@@ -214,6 +214,20 @@ LSBSteg/
 - All tests above, plus: stego PNG re-saved as JPEG → extract; stego MKV re-encoded to
   H.264 MP4 → extract. Report what actually happens.
 - GUI manual test checklist.
+- **SP8 progress (2026-10-22):**
+  - Audit of SP2–SP7 acceptance items vs tests done; gaps closed: results CSV columns
+    (times, sizes, PSNR vs MSE) now checked; cover video file checked unchanged.
+  - Negative demos run for real and turned into `tests/test_negative.py` (11 tests):
+    JPEG re-save (q95 and q100 4:4:4), 99% resize, 1 px crop left/top → message lost
+    (only 47–72 of 104 header bits survived; in one flat-grey resize all 104 survived by
+    luck and the CRC caught it). Crop right/bottom keeps the message while its pixels are
+    untouched. H.264 re-encode (default, yuv420p, crf 0 yuv444p) → lost; libx264rgb crf 0
+    (lossless RGB) → message kept.
+  - Deliberate breakage: decoder swallowing errors (10 fail), column-major pixel order
+    (2 fail), swapped CSV file sizes (1 fail), encoder touching the cover (1 fail). Restored.
+  - Clean run (caches deleted): 181 passed, twice; no stray files or ffmpeg processes.
+    Fresh clone + new venv + `pip install -r requirements.txt`: 181 passed.
+  - Remaining: the team runs `GUI_CHECKLIST.md` by hand.
 
 ### SP9 — Documentation
 - README (purpose, Python 3.12+, install incl. FFmpeg, run, usage, algorithm, header,
