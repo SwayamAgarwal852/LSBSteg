@@ -272,6 +272,21 @@ LSBSteg/
   frames, rate, audio (identical packet hash) kept; no rotation tag in cover or stego.
 - Waiting for the team: commit figures or keep them out of git; then Phase 5.
 
+### Phase 5 progress (2026-10-22) — final
+- MKV 10.021 s vs MP4 10.000 s explained with ffprobe: the AAC audio's first packet sits at
+  -0.021 s (1024 samples priming) in both files; the MKV's audio DURATION counts from it,
+  the MP4 from 0. Video identical: 300 frames, last frame at 9.967 s.
+- 64x64 native zoom figures (macaw pupil edge/iris, scroll top edge) with a prose message
+  (README + VIVA text, 100 %), in git-ignored `results/real/`. Stripe explanation refined:
+  needs both a biased message bit (ASCII top bit) and biased cover LSBs (scroll RGB 0);
+  the macaw shows none (50.0–50.1 % at every bit position).
+- README/VIVA updated with real-cover findings (25 numbers re-checked against the CSV).
+- `SLIDE_CORRECTIONS.txt`: 36 deck quotes verified verbatim (markitdown 0.1.9 in a scratch
+  venv), 64 table values checked against the CSV, 11 figure paths exist; deck sha256
+  unchanged (cd5dd816…).
+- Clean run: 181 passed.
+- NOT done: the team has not run `GUI_CHECKLIST.md` by hand yet.
+
 ## 8. Risks
 
 | Risk | Mitigation |
