@@ -34,6 +34,16 @@ def run_window_in_subprocess(block_dnd: bool):
             root.update(); root.after(10)
         print("dnd=" + str(window.dnd))
         window.close()
+        # Keep Tcl's event loop running after the close, like a second window in the same
+        # process (the in-process smoke tests do this). Timers that close() failed to cancel
+        # fire here and print 'invalid command name ...' (measured). A single normal close
+        # followed by process exit printed nothing even without the fix.
+        other = ctk.CTk(); other.withdraw()
+        for _ in range(100):
+            other.update(); other.after(10)
+        for job in other.tk.call("after", "info"):
+            other.tk.call("after", "cancel", job)
+        other.destroy()
     """)
     proc = subprocess.run([sys.executable, "-c", code], cwd=ROOT, capture_output=True, text=True,
                           timeout=120)
