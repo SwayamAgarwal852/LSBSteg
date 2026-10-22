@@ -14,9 +14,9 @@ there is no encryption) that hides a UTF-8 text message inside a cover **image**
 unchanged) using 1-bit Least Significant Bit (LSB) substitution in the R, G, B bytes.
 The message is preceded by a **length + CRC32 header** (no end-of-message delimiter).
 The decoder returns the exact message or a clear reason why it cannot.
-The project also produces real metrics and figures for the slides, and at the end a
-**new** updated PowerPoint deck (the original `LSB_Steganography.pptx` is never
-overwritten). Video support works by treating frames as images; it is the same algorithm.
+The project also produces real metrics and figures for the slides. No PowerPoint file is
+built or edited (decision 2026-10-22); slide fixes are listed in a plain-text
+`SLIDE_CORRECTIONS.txt`, and the original `LSB_Steganography.pptx` stays untouched. Video support works by treating frames as images; it is the same algorithm.
 
 ### Working rules (summary)
 - Phase gates: implement one subproblem at a time, run its tests, show real output,
@@ -247,9 +247,11 @@ LSBSteg/
   - Remaining: the team runs `GUI_CHECKLIST.md` by hand.
 
 ### SP10 — Extras
-- **Approved:** new deck `LSB_Steganography_v2.pptx` — same design; fix title, abstract,
-  objectives (delimiter → length header, add video), architecture; add results and
-  limitations slides with real numbers only. Original file untouched. Done last.
+- **Removed (team decision 2026-10-22):** the new deck `LSB_Steganography_v2.pptx`.
+  No PowerPoint file is built or edited. Instead, `SLIDE_CORRECTIONS.txt` (plain text)
+  lists slide by slide what to change (current wording → suggested wording) and the real
+  numbers/figure paths for results and limitations slides. The original
+  `LSB_Steganography.pptx` stays untouched.
 - **Pending approval:** chi-square detectability demo.
 - **Rejected:** encryption.
 
@@ -264,12 +266,12 @@ LSBSteg/
 | Only Python 3.13 tested | README states 3.12+ supported, 3.13 tested |
 | Long/HD videos slow, large output | A10 warning; measured timings reported |
 | opencv-python 5.0 is a new major version | Removed after the SP5 Stage A comparison (not needed) |
-| Slides describe a delimiter | Fixed in the v2 deck |
+| Slides describe a delimiter | Listed in `SLIDE_CORRECTIONS.txt`; the team edits the slides |
 
 ---
 
 ## 9. Task order
 
 SP1 finish → SP2 → SP3 → SP4 → SP5 (bit-exact proof first) → SP6 → SP7 → SP8 → SP9 →
-Phase 4 (team's photos/video, or synthetic) → `results.py` run → v2 deck → final report.
+Phase 4 (team's photos/video) → `results.py` run → `SLIDE_CORRECTIONS.txt` → final report.
 Stop for "continue" after each step; commit locally on `main` after each approved step.
